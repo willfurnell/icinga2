@@ -163,6 +163,8 @@ void InfluxdbWriter::ExceptionHandler(boost::exception_ptr exp)
 {
 	Log(LogCritical, "InfluxdbWriter", "Exception during InfluxDB operation: Verify that your backend is operational!");
 
+	SetLastErrorMessage("Exception during InfluxDB operation: " + DiagnosticInformation(exp, false));
+
 	Log(LogDebug, "InfluxdbWriter")
 		<< "Exception during InfluxDB operation: " << DiagnosticInformation(std::move(exp));
 
@@ -465,6 +467,8 @@ void InfluxdbWriter::Flush()
 	Log(LogDebug, "InfluxdbWriter")
 		<< "Flushing data buffer to InfluxDB.";
 
+	int size = m_DataBuffer.size();
+
 	String body = boost::algorithm::join(m_DataBuffer, "\n");
 	m_DataBuffer.clear();
 
@@ -473,10 +477,17 @@ void InfluxdbWriter::Flush()
 	try {
 		stream = Connect();
 	} catch (const std::exception& ex) {
+		auto message = DiagnosticInformation(ex, false);
+
+		SetLastErrorMessage("Cannot connect to InfluxDB: " + message);
+
 		Log(LogWarning, "InfluxDbWriter")
-			<< "Flush failed, cannot connect to InfluxDB: " << DiagnosticInformation(ex, false);
+			<< "Flush failed, cannot connect to InfluxDB: " << message;
 		return;
 	}
+
+	SetLastErrorMessage("");
+	m_QueryStats.InsertValue(Utility::GetTime(), size);
 
 	Defer s ([&stream]() {
 		if (stream.first) {
@@ -615,3 +626,12 @@ void InfluxdbWriter::ValidateServiceTemplate(const Lazy<Dictionary::Ptr>& lvalue
 	}
 }
 
+int InfluxdbWriter::GetQueryCount(RingBuffer::SizeType span)
+{
+	return m_QueryStats.UpdateAndGetValues(Utility::GetTime(), span);
+}
+
+int InfluxdbWriter::GetPendingQueries()
+{
+	return m_DataBuffer.size();
+}
