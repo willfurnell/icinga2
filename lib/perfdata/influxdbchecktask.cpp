@@ -107,30 +107,30 @@ void InfluxdbCheckTask::ScriptFunc(
 		return;
 	}
 
-	double wqItemPerSec = influxdbWriter->GetQueryCount(60) / 60.0;
-	double pendingDataBuffers = influxdbWriter->GetPendingQueries();
+	double queries = influxdbWriter->GetQueryCount(60) / 60.0;
+	double pendingQueries = influxdbWriter->GetPendingQueries();
 	std::ostringstream msgBuffer;
 
-	msgBuffer << "Queries per second: " << std::fixed << std::setprecision(3) << wqItemPerSec << ".";
+	msgBuffer << "Queries per second: " << std::fixed << std::setprecision(3) << queries << ".";
 
 	/* Check whether the thresholds have been defined and match. */
-	if (missingQueriesCritical.IsEmpty() && wqItemPerSec < queriesCritical) {
-		msgBuffer << " " << wqItemPerSec << " queries/s lower than critical threshold (" << queriesCritical << " queries/s).";
+	if (missingQueriesCritical.IsEmpty() && queries < queriesCritical) {
+		msgBuffer << " " << queries << " queries/s lower than critical threshold (" << queriesCritical << " queries/s).";
 
 		state = ServiceCritical;
-	} else if (missingQueriesWarning.IsEmpty() && wqItemPerSec < queriesWarning) {
-		msgBuffer << " " << wqItemPerSec << " queries/s lower than warning threshold (" << queriesWarning << " queries/s).";
+	} else if (missingQueriesWarning.IsEmpty() && queries < queriesWarning) {
+		msgBuffer << " " << queries << " queries/s lower than warning threshold (" << queriesWarning << " queries/s).";
 
 		state = ServiceWarning;
 	}
 
-	if (missingPendingQueriesCrit.IsEmpty() && pendingDataBuffers > pendingQueriesCrit) {
-		msgBuffer << " " << pendingDataBuffers << " pending queries greater than critical threshold ("
+	if (missingPendingQueriesCrit.IsEmpty() && pendingQueries > pendingQueriesCrit) {
+		msgBuffer << " " << pendingQueries << " pending queries greater than critical threshold ("
 			<< pendingQueriesCrit << " queries).";
 
 		state = ServiceCritical;
-	} else if (missingPendingQueriesWarn.IsEmpty() && pendingDataBuffers > pendingQueriesWarn) {
-		msgBuffer << " " << pendingDataBuffers << " pending queries greater than warning threshold ("
+	} else if (missingPendingQueriesWarn.IsEmpty() && pendingQueries > pendingQueriesWarn) {
+		msgBuffer << " " << pendingQueries << " pending queries greater than warning threshold ("
 			<< pendingQueriesWarn << " queries).";
 
 		if (state == ServiceOK) {
@@ -139,11 +139,11 @@ void InfluxdbCheckTask::ScriptFunc(
 	}
 
 	cr->SetPerformanceData(new Array({
-		{ new PerfdataValue("queries", wqItemPerSec, false, "", queriesWarning, queriesCritical) },
+		{ new PerfdataValue("queries", queries, false, "", queriesWarning, queriesCritical) },
 		{ new PerfdataValue("queries_1min", influxdbWriter->GetQueryCount(60)) },
 		{ new PerfdataValue("queries_5mins", influxdbWriter->GetQueryCount(5 * 60)) },
 		{ new PerfdataValue("queries_15mins", influxdbWriter->GetQueryCount(15 * 60)) },
-		{ new PerfdataValue("pending_queries", pendingDataBuffers, false, "", pendingQueriesWarn, pendingQueriesCrit) }
+		{ new PerfdataValue("pending_queries", pendingQueries, false, "", pendingQueriesWarn, pendingQueriesCrit) }
 	}));
 
 	auto errorMessage = influxdbWriter->GetLastErrorMessage();
