@@ -7,7 +7,6 @@
 #include "base/object.hpp"
 #include "base/type.hpp"
 #include "base/dictionary.hpp"
-#include <boost/thread/mutex.hpp>
 
 namespace icinga
 {
@@ -51,7 +50,7 @@ private:
 	typedef std::map<String, intrusive_ptr<ConfigObject> > ObjectMap;
 	typedef std::vector<intrusive_ptr<ConfigObject> > ObjectVector;
 
-	mutable boost::mutex m_Mutex;
+	mutable std::mutex m_Mutex;
 	ObjectMap m_ObjectMap;
 	ObjectVector m_ObjectVector;
 

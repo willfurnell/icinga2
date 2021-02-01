@@ -5,7 +5,6 @@
 
 #include "config/i2-config.hpp"
 #include "base/dictionary.hpp"
-#include <boost/thread/mutex.hpp>
 #include <fstream>
 
 namespace icinga
@@ -29,7 +28,7 @@ private:
 	String m_ObjectsTempFile;
 	std::fstream *m_ObjectsFP{nullptr};
 
-	mutable boost::mutex m_Mutex;
+	mutable std::mutex m_Mutex;
 };
 
 }
