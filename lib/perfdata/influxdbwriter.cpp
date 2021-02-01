@@ -541,7 +541,8 @@ void InfluxdbWriter::Flush()
 	} catch (const std::exception& ex) {
 		Log(LogWarning, "InfluxdbWriter")
 			<< "Cannot write to TCP socket on host '" << GetHost() << "' port '" << GetPort() << "'.";
-		throw;
+
+		throw ex;
 	}
 
 	http::parser<false, http::string_body> parser;
@@ -556,7 +557,7 @@ void InfluxdbWriter::Flush()
 	} catch (const std::exception& ex) {
 		Log(LogWarning, "InfluxdbWriter")
 			<< "Failed to parse HTTP response from host '" << GetHost() << "' port '" << GetPort() << "': " << DiagnosticInformation(ex);
-		throw;
+		throw ex;
 	}
 
 	auto& response (parser.get());
@@ -569,6 +570,9 @@ void InfluxdbWriter::Flush()
 		if (contentType != "application/json") {
 			Log(LogWarning, "InfluxdbWriter")
 				<< "Unexpected Content-Type: " << contentType;
+
+			SetLastErrorMessage("Unexpected Content-Type: " + static_cast<std::string>(contentType));
+
 			return;
 		}
 
@@ -580,10 +584,15 @@ void InfluxdbWriter::Flush()
 		} catch (...) {
 			Log(LogWarning, "InfluxdbWriter")
 				<< "Unable to parse JSON response:\n" << body;
+
+			SetLastErrorMessage("Unable to parse JSON response: " + body);
+
 			return;
 		}
 
 		String error = jsonResponse->Get("error");
+
+		SetLastErrorMessage("InfluxDB error message: " + error);
 
 		Log(LogCritical, "InfluxdbWriter")
 			<< "InfluxDB error message:\n" << error;
